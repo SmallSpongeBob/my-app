@@ -49,3 +49,7 @@ ul {
 .game-info {
     margin-left: 20px;
 }
+
+.game-info-last {
+    margin-right: 10px;
+}

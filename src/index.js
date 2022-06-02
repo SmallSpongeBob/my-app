@@ -4,8 +4,10 @@ import './index.css';
 
 function Square(props) {
     return (
-        <button className="square"
-            onClick={props.onClick}>
+        <button
+            className="square"
+            onClick={props.onClick}
+            style={props.styles}>
             {props.value}
         </button>
     );
@@ -16,7 +18,9 @@ class Board extends React.Component {
         return (
             <Square
                 value={this.props.squares[i]}
-                onClick={() => this.props.onClick(i)} />
+                onClick={() => this.props.onClick(i)}
+                styles={this.props.styles(i)}
+            />
         );
     }
 
@@ -53,10 +57,12 @@ function calculateWinner(squares) {
     for (let i = 0; i < lines.length; i++) {
         const [a, b, c] = lines[i];
         if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-            return {
-                winnerName: squares[a],
-                winIndex: [a, b, c]
-            }
+            return lines[i];
+            // return {
+            //     winnerName: squares[a],
+            //     winIndex: [a, b, c]
+
+            // }
         }
     }
     return null;
@@ -67,12 +73,14 @@ class Game extends React.Component {
         super(props);
         this.state = {
             history: [{
-                squares: Array(9).fill(null)
-            }],
-            position: [{
+                squares: Array(9).fill(null),
                 row: null,
                 column: null,
             }],
+            // position: [{
+            //     row: null,
+            //     column: null,
+            // }],
 
             stepNumber: 0,
             xIsNext: true,
@@ -80,9 +88,18 @@ class Game extends React.Component {
         }
     }
 
+    //5.每当有人获胜时，高亮显示连成一线的 3 颗棋子。
+    winnerStyle(winners, i) {
+        const styles = { background: "lightblue" };
+        if (winners && winners.indexOf(i) > -1) {
+            return styles;
+        }
+        return null;
+    }
+
     handleClick(i) {
         //position棋子的坐标
-        const position = this.state.position.slice(0, this.state.stepNumber + 1)
+        // const position = this.state.position.slice(0, this.state.stepNumber + 1)
         const history = this.state.history.slice(0, this.state.stepNumber + 1);
         const current = history[history.length - 1];
         const squares = current.squares.slice();
@@ -97,12 +114,14 @@ class Game extends React.Component {
         this.setState({
             history: history.concat([{
                 squares: squares,
-            }]),
-
-            position: position.concat([{
                 row: row,
                 column: column,
             }]),
+
+            // position: position.concat([{
+            //     row: row,
+            //     column: column,
+            // }]),
 
             stepNumber: history.length,
             xIsNext: !this.state.xIsNext,
@@ -115,24 +134,42 @@ class Game extends React.Component {
             xIsNext: (step % 2) === 0,
         });
     }
+
+    //7.悔棋
+    jumpToLast() {
+        let stepNum = this.state.stepNumber;
+        if (stepNum === 0) {
+            this.setState({
+                stepNumber: 0,
+                xIsNext: true,
+            })
+        } else {
+            this.setState({
+                stepNumber: stepNum - 1,
+                xIsNext: ((stepNum - 1) % 2) === 0,
+            })
+        }
+    }
+
     changeSquence() {
         this.setState({
             sort: !this.state.sort,
         });
     }
+
     render() {
         const history = this.state.history;
-        const position = this.state.position;
+        // const position = this.state.position;
         const current = history[this.state.stepNumber];
-        const winner = calculateWinner(current.squares);
+        const winners = calculateWinner(current.squares);
         const moves = history.map((step, move) => {
             //1.在游戏历史记录列表显示每一步棋的坐标，格式为 (列号, 行号)。
             const desc = move ?
-                'Go to move #' + move + '落棋的坐标位置:(' + position[move].row + ',' + position[move].column + ')' :
+                'Go to move #' + move + '落棋的坐标位置:(' + history[move].row + ',' + history[move].column + ')' :
                 'Go to game start';
 
             //2.在历史记录列表中加粗显示当前选择的项目
-            let font = (move == this.state.stepNumber) ?
+            let font = (move === this.state.stepNumber) ?
                 { fontWeight: 'bold' } :
                 { fontWeight: 'normal' };
 
@@ -144,12 +181,13 @@ class Game extends React.Component {
         });
 
         let status;
-        //5.每当有人获胜时，高亮显示连成一线的 3 颗棋子。
-        if (winner) {
-            status = 'Winner:' + winner.winnerName;
-            for (let i of winner.winIndex) {
-                document.getElementsByClassName('square')[i].style = "background:lightblue;";
-            }
+        if (winners) {
+            const winner = current.squares[winners[0]];
+            status = 'Winner:' + winner;
+            // for (let i of winner.winIndex) {
+            //document.getElementsByClassName('square')[i].style = "background:lightblue;";
+
+            // }
 
             //6.当无人获胜时，显示一个平局的消息。
         } else if (this.state.stepNumber == 9) {
@@ -165,10 +203,11 @@ class Game extends React.Component {
                     <Board
                         squares={current.squares}
                         onClick={(i) => this.handleClick(i)}
-                    />
+                        styles={(i) => this.winnerStyle(winners, i)} />
                 </div>
                 <div className="game-info" >
                     <div> {status} </div>
+                    <button onClick={() => this.jumpToLast(moves)} className='game-info-last'>悔棋</button>
                     {/* 4.添加一个可以升序或降序显示历史记录的按钮 */}
                     <button onClick={() => this.changeSquence()}>{this.state.sort ? "降序" : "升序"}</button>
                     <ol > {this.state.sort ? moves : moves.reverse()} </ol>
@@ -176,7 +215,6 @@ class Game extends React.Component {
         );
     }
 }
-// ========================================
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(< Game />);
